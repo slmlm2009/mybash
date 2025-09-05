@@ -1,0 +1,412 @@
+#!/usr/bin/env bash
+
+# Check if running interactively
+[[ $- != *i* ]] && return
+#######################################################
+# INITIALIZATION
+#######################################################
+
+# Display system info if fastfetch is available
+# command -v fastfetch >/dev/null 2>&1 && fastfetch
+
+# Source system-wide bash configuration
+[[ -f /etc/bashrc ]] && source /etc/bashrc
+
+# Enable bash completion
+if [[ -f /usr/share/bash-completion/bash_completion ]]; then
+    source /usr/share/bash-completion/bash_completion
+elif [[ -f /etc/bash_completion ]]; then
+    source /etc/bash_completion
+fi
+
+#######################################################
+# FZF INTEGRATION (v0.24 Compatible)
+#######################################################
+
+alias fd='fdfind'
+alias bat='batcat'
+
+# Source fzf key bindings and completion (v0.24 method)
+# Key bindings for CTRL-T, CTRL-R, and ALT-C
+[[ -f /usr/share/doc/fzf/examples/key-bindings.bash ]] && source /usr/share/doc/fzf/examples/key-bindings.bash
+[[ -f /usr/share/doc/fzf/examples/completion.bash ]] && source /usr/share/doc/fzf/examples/completion.bash
+
+# For bash-completion integration:
+[[ -f /usr/share/bash-completion/completions/fzf ]] && source /usr/share/bash-completion/completions/fzf
+
+# FZF Configuration
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+
+# Use fd for fzf if available (respects .gitignore)
+if command -v fdfind >/dev/null 2>&1; then
+    export FZF_DEFAULT_COMMAND='fdfind --type f --hidden --follow --exclude .git --exclude node_modules --exclude target'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_ALT_C_COMMAND='fdfind --type d --hidden --follow --exclude .git --exclude node_modules --exclude target'
+elif command -v rg >/dev/null 2>&1; then
+    export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!{.git,node_modules,target}/*"'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+else
+    # Fallback to find command
+    export FZF_DEFAULT_COMMAND='find . -type f ! -path "*/\.git/*" ! -path "*/node_modules/*" ! -path "*/target/*" 2>/dev/null'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_ALT_C_COMMAND='find . -type d ! -path "*/\.git/*" ! -path "*/node_modules/*" ! -path "*/target/*" 2>/dev/null'
+fi
+
+# FZF key binding options (v0.24 compatible - NO --walker-skip)
+export FZF_CTRL_T_OPTS="--preview 'batcat -n --color=always {} 2>/dev/null || cat {} 2>/dev/null || echo \"[Binary file]\"' --bind 'ctrl-/:toggle-preview'"
+
+export FZF_CTRL_R_OPTS="--bind 'ctrl-y:execute-silent(echo -n {2..} | xclip -selection clipboard)+abort' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+
+export FZF_ALT_C_OPTS="--preview 'exa --tree --level=2 {} 2>/dev/null || tree -C {} 2>/dev/null || ls -la {}'"
+
+# Custom fzf completion trigger (optional - default is **)
+export FZF_COMPLETION_TRIGGER='**'
+
+# Options for path and directory completion
+export FZF_COMPLETION_OPTS='--border --info=inline'
+
+# Custom completion functions for v0.24 compatibility
+_fzf_compgen_path() {
+    if command -v fdfind >/dev/null 2>&1; then
+        fdfind --hidden --follow --exclude ".git" --exclude "node_modules" --exclude "target" . "$1"
+    else
+        find "$1" -name ".*" -prune -o -type f -print -o -type l -print 2>/dev/null | sed 's@^\./@@'
+    fi
+}
+
+_fzf_compgen_dir() {
+    if command -v fdfind >/dev/null 2>&1; then
+        fdfind --type d --hidden --follow --exclude ".git" --exclude "node_modules" --exclude "target" . "$1"
+    else
+        find "$1" -name ".*" -prune -o -type d -print 2>/dev/null | sed 's@^\./@@'
+    fi
+}
+
+_fzf_comprun() {
+  local command=$1
+  shift
+
+  case "$command" in
+    cd)           fzf --preview 'exa --tree --color=always {} | head -200' "$@" ;;
+    export|unset) fzf --preview "eval 'echo $'{}"         "$@" ;;
+    ssh)          fzf --preview 'dig {}'                   "$@" ;;
+    *)            fzf --preview "batcat -n --color=always --line-range :500 {}" "$@" ;;
+  esac
+}
+
+#######################################################
+# SHELL OPTIONS
+#######################################################
+
+# Update window size after each command
+shopt -s checkwinsize
+
+# Append to history instead of overwriting
+shopt -s histappend
+
+# Disable terminal bell
+bind "set bell-style none" 2>/dev/null
+
+# Case-insensitive completion
+bind "set completion-ignore-case on" 2>/dev/null
+
+# Show completion list immediately
+bind "set show-all-if-ambiguous on" 2>/dev/null
+
+# Allow Ctrl+S for forward history search
+#stty -ixon 2>/dev/null
+#######################################################
+# HISTORY CONFIGURATION
+#######################################################
+
+export HISTSIZE=10000
+export HISTFILESIZE=20000
+export HISTTIMEFORMAT="%F %T "
+export HISTCONTROL="erasedups:ignoredups:ignorespace"
+export PROMPT_COMMAND="history -a"
+#######################################################
+# ENVIRONMENT VARIABLES
+#######################################################
+
+# XDG Base Directory Specification
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_STATE_HOME="$HOME/.local/state"
+export XDG_CACHE_HOME="$HOME/.cache"
+
+# Default editors
+export EDITOR="nano"
+export VISUAL="nano"
+
+# Color support
+export CLICOLOR=1
+export LESS_TERMCAP_mb=$'\e[1;31m'
+export LESS_TERMCAP_md=$'\e[1;31m'
+export LESS_TERMCAP_me=$'\e[0m'
+export LESS_TERMCAP_se=$'\e[0m'
+export LESS_TERMCAP_so=$'\e[1;44;33m'
+export LESS_TERMCAP_ue=$'\e[0m'
+export LESS_TERMCAP_us=$'\e[1;32m'
+
+# PATH additions
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+#######################################################
+# UTILITY FUNCTIONS
+#######################################################
+
+# Replace cd with zoxide
+# alias cd='z'
+
+# Replace apt with nala without sudo
+alias apt='nala'
+
+# Replace apt with nala in with sudo
+sudo() {
+    if [ "$1" = "apt" ]; then
+        command sudo nala "${@:2}"
+    else
+        command sudo "$@"
+    fi
+}
+
+# Detect Linux distribution
+get_distro() {
+    if [[ -f /etc/os-release ]]; then
+        source /etc/os-release
+        case "$ID" in
+            fedora|rhel|centos|rocky|almalinux) echo "redhat" ;;
+            ubuntu|debian|mint) echo "debian" ;;
+            arch|manjaro|endeavouros) echo "arch" ;;
+            opensuse*|sles) echo "suse" ;;
+            gentoo) echo "gentoo" ;;
+            *) echo "unknown" ;;
+        esac
+    else
+        echo "unknown"
+    fi
+}
+
+# Extract various archive formats
+extract() {
+    for file in "$@"; do
+        if [[ -f "$file" ]]; then
+            case "$file" in
+                *.tar.bz2) tar xjf "$file" ;;
+                *.tar.gz) tar xzf "$file" ;;
+                *.tar.xz) tar xJf "$file" ;;
+                *.bz2) bunzip2 "$file" ;;
+                *.rar) unrar x "$file" ;;
+                *.gz) gunzip "$file" ;;
+                *.tar) tar xf "$file" ;;
+                *.tbz2) tar xjf "$file" ;;
+                *.tgz) tar xzf "$file" ;;
+                *.zip) unzip "$file" ;;
+                *.Z) uncompress "$file" ;;
+                *.7z) 7z x "$file" ;;
+                *) echo "Unknown archive format: $file" ;;
+            esac
+        else
+            echo "File not found: $file"
+        fi
+    done
+}
+
+# Create directory and cd into it
+mkcd() {
+    mkdir -p "$1" && cd "$1"
+}
+
+# Go up n directories
+up() {
+    local levels=${1:-1}
+    local path=""
+    for ((i=0; i<levels; i++)); do
+        path="../$path"
+    done
+    cd "$path"
+}
+
+# Enhanced cd with auto-ls
+# cd() {
+    # if [[ $# -eq 0 ]]; then
+        # builtin cd ~ && ls -la
+    # else
+        # builtin cd "$@" && ls -la
+    # fi
+# }
+
+# Search text in files
+# search() {
+    # grep -rn --color=always "$1" . | less -R
+# }
+
+# Get internal and external IP
+myip() {
+    echo "Internal IP:"
+    ip route get 1.1.1.1 | awk '{print $7}' 2>/dev/null || echo "Not connected"
+    echo "External IP:"
+    curl -4 -s ifconfig.me || echo "Unable to fetch"
+}
+#######################################################
+# ALIASES - SYSTEM
+#######################################################
+
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias ~='cd ~'
+alias c='clear'
+alias h='history'
+alias j='jobs -l'
+alias path='echo -e ${PATH//:/\\n}'
+alias now='date +"%T"'
+alias nowdate='date +"%d-%m-%Y"'
+alias sbashrc='source ~/.bashrc'
+alias ebashrc='sudo nano -l ~/.bashrc'
+alias cbashrc='cat ~/.bashrc'
+
+#######################################################
+# ALIASES - FILE OPERATIONS
+#######################################################
+
+alias ls='ls --color=auto -F'
+alias ll='ls -lh --sort=modified --reverse --group-directories-first'
+alias la='ls -a'
+# alias l='ls -CF'
+# alias lt='ls -lha --sort=modified --reverse --group-directories-first'
+alias lla='ls -lha --sort=modified --reverse --group-directories-first'
+alias tree='tree -C'
+
+alias cp='cp -i'
+alias mv='mv -i'
+alias rm='rm -i'
+alias mkdir='mkdir -pv'
+
+# Safe alternatives
+command -v trash >/dev/null 2>&1 && alias rm='trash'
+
+#######################################################
+# ALIASES - TEXT PROCESSING
+#######################################################
+
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# Use modern alternatives if available
+command -v rg >/dev/null 2>&1 && alias grep='rg'
+command -v batcat >/dev/null 2>&1 && alias cat='batcat'
+command -v exa >/dev/null 2>&1 && alias ls='exa'
+
+#######################################################
+# ALIASES - SYSTEM MONITORING
+#######################################################
+
+alias df='df -h'
+alias du='du -h'
+alias free='free -h'
+alias ps='ps auxf'
+# alias psg='ps aux | grep'
+alias top='htop'
+alias ports='netstat -tulanp'
+
+#######################################################
+# ALIASES - PACKAGE MANAGEMENT
+#######################################################
+
+DISTRO=$(get_distro)
+case "$DISTRO" in
+    "debian")
+        alias install='sudo apt install'
+        alias update='sudo apt update && sudo apt upgrade'
+        alias search='apt search'
+        alias remove='sudo apt remove'
+        ;;
+    "redhat")
+        alias install='sudo dnf install'
+        alias update='sudo dnf update'
+        alias search='dnf search'
+        alias remove='sudo dnf remove'
+        ;;
+    "arch")
+        alias install='sudo pacman -S'
+        alias update='sudo pacman -Syu'
+        alias search='pacman -Ss'
+        alias remove='sudo pacman -R'
+        ;;
+esac
+
+#######################################################
+# ALIASES - DEVELOPMENT
+#######################################################
+
+# alias vim='nvim'
+# alias vi='nvim'
+alias edit='$EDITOR'
+
+# Git shortcuts
+alias g='git'
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git log --oneline'
+alias gd='git diff'
+
+# Quick commit
+gcom() {
+    git add . && git commit -m "$1"
+}
+
+# Lazy git (add, commit, push)
+lazy() {
+    git add . && git commit -m "$1" && git push
+}
+
+#######################################################
+# ALIASES - DOCKER
+#######################################################
+
+alias d='docker'
+alias dc='docker-compose'
+alias dps='docker ps'
+alias di='docker images'
+alias dclean='docker system prune -af'
+
+#######################################################
+# ALIASES - NETWORKING
+#######################################################
+
+alias ping='ping -c 5'
+alias wget='wget -c'
+alias curl='curl -L'
+
+#######################################################
+# CUSTOM KEYBINDINGS
+#######################################################
+
+# Bind Ctrl+f to zi (zoxide interactive)
+#bind '"\C-f":"zi\n"' 2>/dev/null
+
+#######################################################
+# PROMPT AND SHELL ENHANCEMENTS
+#######################################################
+
+# Initialize starship prompt if available
+command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
+
+# Initialize zoxide if available
+# command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"
+
+#######################################################
+# AUTO-START X11
+#######################################################
+
+# Auto-start X11 on tty1
+if [[ -z "$DISPLAY" ]] && [[ "$(tty)" = "/dev/tty1" ]]; then
+exec startx
+fi
+
+eval "$(zoxide init --cmd cd bash)"
+
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
