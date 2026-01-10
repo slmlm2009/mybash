@@ -123,7 +123,7 @@ setup_directories() {
 
 # Installation functions
 install_packages() {
-    local packages="bash bash-completion tar bat tree multitail wget unzip fontconfig"
+    local packages="bash bash-completion tar bat tree multitail wget unzip fontconfig tldr exa"
     # if ! command_exists nvim; then
         # packages="$packages neovim"
         # fi
