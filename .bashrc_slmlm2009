@@ -271,11 +271,11 @@ alias cls=clear
 #######################################################
 
 alias ls='ls --color=auto -F'
-alias ll='ls -lh --sort=time --reverse --group-directories-first'
+alias ll='ls -lh --sort=modified --reverse --group-directories-first'
 alias la='ls -a'
 # alias l='ls -CF'
-# alias lt='ls -lha --sort=time --reverse --group-directories-first'
-alias lla='ls -lha --sort=time --reverse --group-directories-first'
+# alias lt='ls -lha --sort=modified --reverse --group-directories-first'
+alias lla='ls -lha --sort=modified --reverse --group-directories-first'
 alias tree='tree -C'
 
 alias cp='cp -i'
