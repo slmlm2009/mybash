@@ -264,6 +264,7 @@ alias nowdate='date +"%d-%m-%Y"'
 alias sbashrc='source ~/.bashrc'
 alias ebashrc='sudo nano -l ~/.bashrc'
 alias cbashrc='cat ~/.bashrc'
+alias cls=clear
 
 #######################################################
 # ALIASES - FILE OPERATIONS
