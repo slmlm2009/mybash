@@ -39,7 +39,7 @@ export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
 
 # Use fd for fzf if available (respects .gitignore)
 if command -v fdfind >/dev/null 2>&1; then
-    export FZF_DEFAULT_COMMAND='fdfind --type f --hidden --follow --exclude .git --exclude node_modules --exclude target'
+    export FZF_DEFAULT_COMMAND='fdfind --hidden --follow --exclude .git --exclude node_modules --exclude target'
     export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
     export FZF_ALT_C_COMMAND='fdfind --type d --hidden --follow --exclude .git --exclude node_modules --exclude target'
 elif command -v rg >/dev/null 2>&1; then
