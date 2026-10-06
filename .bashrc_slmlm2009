@@ -426,4 +426,4 @@ ex() {
 export PATH="/home/ubuntu/.local/share/pi-node/node-v22.23.2-linux-arm64/bin:$PATH"
 
 . "$HOME/.local/share/../bin/env"
-PI_SKIP_VERSION_CHECK=1 pi
+PI_SKIP_VERSION_CHECK=1
